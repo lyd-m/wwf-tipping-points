@@ -4,6 +4,7 @@ rm(list = ls())
 library(tidyverse)
 library(testthat)
 library(purrr)
+library(scales)
 
 # parameters ------------------
 
@@ -28,7 +29,7 @@ df_shrimp <- read_csv(list.files(path = "./input-data/company-data/",
                         logistics_hub = col_character(),
                         port_of_export = col_character(),
                         exporter = col_character(),
-                        importer = col_character(),
+                        importer = col_character(), 
                         country_of_destination = col_character(),
                         economic_bloc = col_character(),
                         volume = col_double(),
@@ -40,7 +41,7 @@ df_shrimp <- read_csv(list.files(path = "./input-data/company-data/",
                         country_of_destination_trase_id = col_character()
                       ))
 
-# cleaning ------------------
+# cleaning + checking data ------------------
 
 vars_grouping <- c(
   "country_of_production", "year", "province_of_production", 
@@ -48,7 +49,8 @@ vars_grouping <- c(
   "exporter", "importer", "country_of_destination", "economic_bloc"
 )
 
-vars_values <- c("volume", "fob")
+vars_values <- c("volume", # traded volume (tonnes) 
+                 "fob") # freight/free on board value (USD)
 
 
 group_var_by_category <- function(data, category_column, sum_var) {
@@ -82,29 +84,71 @@ test_that("Group totals match grand total",{
   })
 })
 
+## missing values
+
+anyNA(df_shrimp)
+
 # eda ------------------
 
+## general structure
 for (var_ in vars_grouping) {
   print(var_)
   print(summary(df_shrimp[[var_]]))
 }
 
 ## how have variables changed through time?
-variable_by_year <- function(data, var){
+
+plot_variable_over_time <- function(data, var){
   df <- data %>%
       group_by(year) %>%
-      summarise(var = sum(!!sym(var)), na.rm = TRUE)
+      summarise(total = sum(!!sym(var)), na.rm = TRUE)
   
   plot <- ggplot(df,
-         mapping = aes(x = year,y = var)) +
-    geom_bar(stat = "identity")
+         mapping = aes(x = year,y = total)) +
+    geom_bar(stat = "identity") +
+    labs(title = paste(var),
+         y = paste(var))
   
   print(plot)
 }
 
-for(variable in c("volume","fob")) {
-  variable_by_year(df_shrimp, var = variable)
+for(var_ in vars_values) {
+  plot_variable_over_time(df_shrimp, var = var_)
 }
+
+## top 10 for each grouping variable, pct, and total pct of top 10
+
+for(var_group in vars_grouping) {
+  for(var_value in vars_values) {
+    col_name <- var_value
+    df <- group_var_by_category(df_shrimp, var_group, var_value) %>%
+      arrange(desc(total)) %>%
+      mutate(rank = row_number(),
+             pct = total/sum(total)) %>%
+      filter(rank <= 10) %>%
+      rename(!!col_name := total)
+    
+    print(df)
+    print(sum(df$pct))
+  }
+} 
+
+## list for each grouping variable of all factors accounting for min 1% of the value variable
+
+for(var_group in vars_grouping) {
+  for(var_value in vars_values) {
+    col_name <- var_value
+    df <- group_var_by_category(df_shrimp, var_group, var_value) %>%
+      arrange(desc(total)) %>%
+      mutate(rank = row_number(),
+             pct = total/sum(total)) %>%
+      filter(pct >= 0.01) %>%
+      rename(!!col_name := total)
+    
+    print(df, n=25)
+    print(sum(df$pct))
+  }
+} 
 
 
 # findings + visualisation ------------------
