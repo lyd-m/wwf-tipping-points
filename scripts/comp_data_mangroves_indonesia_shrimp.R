@@ -118,7 +118,7 @@ for(var_ in vars_values) {
 
 ## top 10 for each grouping variable, pct, and total pct of top 10
 
-top_ten_list <- list()
+top_ten_list_all_yrs_total <- list()
 
 for(var_group in vars_grouping) {
   for(var_value in vars_values) {
@@ -139,7 +139,7 @@ for(var_group in vars_grouping) {
 
 ## list for each grouping variable of all factors accounting for min 1% of the value variable
 
-min_1pct_list <- list()
+min_1pct_list_all_yrs_total <- list()
 
 for(var_group in vars_grouping) {
   for(var_value in vars_values) {
@@ -159,7 +159,6 @@ for(var_group in vars_grouping) {
 } 
 
 # findings + visualisation ------------------
-
 
 # wrap-up + export ------------------
 
