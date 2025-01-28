@@ -118,6 +118,8 @@ for(var_ in vars_values) {
 
 ## top 10 for each grouping variable, pct, and total pct of top 10
 
+top_ten_list <- list()
+
 for(var_group in vars_grouping) {
   for(var_value in vars_values) {
     col_name <- var_value
@@ -128,12 +130,16 @@ for(var_group in vars_grouping) {
       filter(rank <= 10) %>%
       rename(!!col_name := total)
     
+    top_ten_list[[paste(var_group, var_value, sep = "_")]] <- df
+    
     print(df)
     print(sum(df$pct))
   }
 } 
 
 ## list for each grouping variable of all factors accounting for min 1% of the value variable
+
+min_1pct_list <- list()
 
 for(var_group in vars_grouping) {
   for(var_value in vars_values) {
@@ -145,13 +151,15 @@ for(var_group in vars_grouping) {
       filter(pct >= 0.01) %>%
       rename(!!col_name := total)
     
+    min_1pct_list[[paste(var_group, var_value, sep = "_")]] <- df
+    
     print(df, n=25)
     print(sum(df$pct))
   }
 } 
 
-
 # findings + visualisation ------------------
+
 
 # wrap-up + export ------------------
 
