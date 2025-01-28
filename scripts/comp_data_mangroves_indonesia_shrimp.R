@@ -52,6 +52,7 @@ vars_grouping <- c(
 vars_values <- c("volume", # traded volume (tonnes) 
                  "fob") # freight/free on board value (USD)
 
+vars_years <- c(2015, 2016, 2017, 2018)
 
 group_var_by_category <- function(data, category_column, sum_var) {
   data %>%
@@ -130,7 +131,7 @@ for(var_group in vars_grouping) {
       filter(rank <= 10) %>%
       rename(!!col_name := total)
     
-    top_ten_list[[paste(var_group, var_value, sep = "_")]] <- df
+    top_ten_list_all_yrs_total[[paste(var_group, var_value, sep = "_")]] <- df
     
     print(df)
     print(sum(df$pct))
@@ -151,12 +152,63 @@ for(var_group in vars_grouping) {
       filter(pct >= 0.01) %>%
       rename(!!col_name := total)
     
-    min_1pct_list[[paste(var_group, var_value, sep = "_")]] <- df
+    min_1pct_list_all_yrs_total[[paste(var_group, var_value, sep = "_")]] <- df
     
     print(df, n=25)
     print(sum(df$pct))
   }
 } 
+
+# Let's check whether the top ten changes if you look at annual data
+
+top_ten_list_by_yr <- list()
+
+for(var_group in vars_grouping) {
+  for(var_value in vars_values) {
+    for(year_ in vars_years) {
+    col_name <- var_value
+    df <- df_shrimp %>%
+      filter(year == year_) %>%
+      group_var_by_category(var_group, var_value) %>%
+      arrange(desc(total)) %>%
+      mutate(rank = row_number(),
+             pct = total/sum(total)) %>%
+      filter(rank <= 10) %>%
+      rename(!!col_name := total)
+    
+    top_ten_list_by_yr[[paste(var_group, var_value, year_, sep = "_")]] <- df
+    
+    print(year_)
+    print(df)
+    print(sum(df$pct))
+    }
+  }
+}
+
+## comparing the top ten exportersusing cosine similarity
+
+library(lsa)
+list1 <- top_ten_list_by_yr[["exporter_volume_2015"]]$exporter
+list2 <- top_ten_list_by_yr[["exporter_volume_2016"]]$exporter
+list3 <- top_ten_list_by_yr[["exporter_volume_2017"]]$exporter
+list4 <- top_ten_list_by_yr[["exporter_volume_2018"]]$exporter
+
+# Jaccard Similarity function
+jaccard_similarity <- function(listA, listB) {
+  length(intersect(listA, listB)) / length(union(listA, listB))
+}
+
+# Compare the lists pairwise
+pairwise_comparisons <- list(
+  c1c2 = jaccard_similarity(list1, list2),
+  c1c3 = jaccard_similarity(list1, list3),
+  c1c4 = jaccard_similarity(list1, list4),
+  c2c3 = jaccard_similarity(list2, list3),
+  c2c4 = jaccard_similarity(list2, list4),
+  c3c4 = jaccard_similarity(list3, list4)
+)
+
+pairwise_comparisons
 
 # findings + visualisation ------------------
 
