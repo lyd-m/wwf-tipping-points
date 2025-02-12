@@ -191,32 +191,38 @@ for(var_group in vars_grouping) {
   }
 }
 
-## comparing the top ten exportersusing cosine similarity
+## comparing the top ten exporters using cosine similarity
 
 library(lsa)
 list1 <- top_ten_list_by_yr[["exporter_volume_2015"]]$exporter
 list2 <- top_ten_list_by_yr[["exporter_volume_2016"]]$exporter
 list3 <- top_ten_list_by_yr[["exporter_volume_2017"]]$exporter
 list4 <- top_ten_list_by_yr[["exporter_volume_2018"]]$exporter
+list5 <- top_ten_list_all_yrs_total[["exporter_volume"]]$exporter
 
-# Jaccard Similarity function
+# Jaccard Similarity function to compare number in A vs B
 jaccard_similarity <- function(listA, listB) {
   length(intersect(listA, listB)) / length(union(listA, listB))
 }
 
-# Compare the lists pairwise
+# compare the lists when using different years
 pairwise_comparisons <- list(
-  c1c2 = jaccard_similarity(list1, list2),
-  c1c3 = jaccard_similarity(list1, list3),
-  c1c4 = jaccard_similarity(list1, list4),
-  c2c3 = jaccard_similarity(list2, list3),
-  c2c4 = jaccard_similarity(list2, list4),
-  c3c4 = jaccard_similarity(list3, list4)
+  c1c2 = jaccard_similarity(list1, list2), # 2015 vs 2016
+  c1c3 = jaccard_similarity(list1, list3), # 2015 vs 2017
+  c1c4 = jaccard_similarity(list1, list4), # 2015 vs 2018
+  c2c3 = jaccard_similarity(list2, list3), # 2016 vs 2017
+  c2c4 = jaccard_similarity(list2, list4), # 2016 vs 2018
+  c3c4 = jaccard_similarity(list3, list4),  # 2017 vs 2018
+  c1c5 = jaccard_similarity(list1, list5), # 2016 vs all yrs
+  c2c5 = jaccard_similarity(list2, list5),  # 2017 vs all yrs
+  c3c5 = jaccard_similarity(list3, list5), # 2016 vs all yrs
+  c4c5 = jaccard_similarity(list4, list5)  # 2017 vs all yrs
 )
 
 pairwise_comparisons
 
 # findings + visualisation ------------------
+## go ahead with most recent year of data (since top ten remained static between 2017 and 2018) and is 82% overlap with all years. 
 
 indonesia_shrimp_top_ten <- top_ten_list_by_yr[["exporter_volume_2018"]] %>%
   mutate(exporter = str_to_title(exporter),
