@@ -5,6 +5,7 @@ library(tidyverse)
 library(testthat)
 library(purrr)
 library(scales)
+library(janitor)
 
 # parameters ------------------
 
@@ -211,6 +212,11 @@ pairwise_comparisons <- list(
 pairwise_comparisons
 
 # findings + visualisation ------------------
+
+indonesia_shrimp_top_ten <- top_ten_list_by_yr[["exporter_volume_2018"]] %>%
+  mutate(exporter = str_to_title(exporter),
+         pct_neat = percent(pct, accuracy = 0.1))
+save(indonesia_shrimp_top_ten, file = "./intermediate-results/companies_indonesia_shrimp.RData")
 
 # wrap-up + export ------------------
 
