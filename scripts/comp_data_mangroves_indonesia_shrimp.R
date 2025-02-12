@@ -9,14 +9,6 @@ library(janitor)
 
 # parameters ------------------
 
-# functions ------------------
-
-group_var_by_category <- function(data, category_column, sum_var) {
-  data %>%
-    group_by(!!sym(category_column)) %>%
-    summarise(sum_var = sum(!!sym(sum_var), na.rm = TRUE))
-}
-
 # import ------------------
 
 df_shrimp <- read_csv(list.files(path = "./input-data/company-data/",
@@ -53,7 +45,7 @@ vars_grouping <- c(
 vars_values <- c("volume", # traded volume (tonnes) 
                  "fob") # freight/free on board value (USD)
 
-vars_years <- c(2015, 2016, 2017, 2018)
+vars_years <- unique(df_shrimp$year)
 
 group_var_by_category <- function(data, category_column, sum_var) {
   data %>%
@@ -96,6 +88,19 @@ anyNA(df_shrimp)
 for (var_ in vars_grouping) {
   print(var_)
   print(summary(df_shrimp[[var_]]))
+}
+
+## number of unique values in each variable
+
+for (var_group in vars_grouping) {
+  df <- df_shrimp %>%
+    group_var_by_category(category_column = var_group,
+                          sum_var = vars_values[1]) %>% # check only for volume
+    distinct(!!sym(var_group))
+  
+  print(var_group)
+  print(df)
+  print(nrow(df))
 }
 
 ## how have variables changed through time?
