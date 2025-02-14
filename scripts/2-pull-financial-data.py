@@ -153,8 +153,9 @@ for asset_class in asset_classes_flows:
     df = pd.DataFrame()
 
     # separating out pulls into years to account for changes in hierarchies
+    # can change df_companies_permids to df_companies_permids_test (small df) to troubleshoot
     for yr in yrs:
-        permids_companies_this_yr = df_companies_permids_test.loc[df_companies_permids_test["year"]==yr, "permid"].tolist()
+        permids_companies_this_yr = df_companies_permids.loc[df_companies_permids["year"]==yr, "permid"].tolist()
         
         # debugging: check there are permids being searched
         print(f"Year: {yr}, PermIDs found: {len(permids_companies_this_yr)}")
