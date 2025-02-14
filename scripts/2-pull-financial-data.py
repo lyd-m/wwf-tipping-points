@@ -23,6 +23,7 @@ from refinitiv.data.content import search
 import pandas as pd
 import openpyxl as xl
 import time
+import datetime
 import string
 import pytest
 
@@ -225,9 +226,16 @@ for asset_class in asset_classes_flows:
 end_exec = time.time()
 print(f'This code tool {end_exec - start_exec} to run')
 
+# check files have generated
 print(df_loans)
 print(df_bond_deals)
 print(df_equity_deals)
+
+# save files
+today = datetime.date.today()
+df_loans.to_csv(f'./intermediate-results/{today}-loan-deals.csv')
+df_bond_deals.to_csv(f'./intermediate-results/{today}-bond-deals.csv')
+df_equity_deals.to_csv(f'./intermediate-results/{today}-equity-deals.csv')
 
 
 
