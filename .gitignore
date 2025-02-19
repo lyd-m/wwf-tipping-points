@@ -1,4 +1,12 @@
+# R files
 .Rproj.user
 .Rhistory
 .RData
 .Ruserdata
+.DS_Store
+
+# Python files
+*.env
+
+# Data pulled under licence
+/intermediate-results/
