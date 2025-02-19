@@ -123,7 +123,7 @@ for(var_ in vars_values) {
   plot_variable_over_time(df_shrimp, var = var_)
 }
 
-## top 10 for each grouping variable, pct, and total pct of top 10
+## top 10 for each grouping variable, pct, and total pct held by top 10
 
 top_ten_list_all_yrs_total <- list()
 
@@ -143,6 +143,8 @@ for(var_group in vars_grouping) {
     print(sum(df$pct))
   }
 } 
+
+### min 1% ----------------------- 
 
 ## list for each grouping variable of all factors accounting for min 1% of the value variable
 
@@ -165,7 +167,39 @@ for(var_group in vars_grouping) {
   }
 } 
 
-# Let's check whether the top ten changes if you look at annual data
+## Check how many companies get for min 1%
+
+sum(min_1pct_list_all_yrs_total[["exporter_volume"]]$pct)
+nrow(min_1pct_list_all_yrs_total[["exporter_volume"]])
+
+## list min 1% by year, covering all variables and groupings
+
+min_1pct_list_by_yr <- list()
+
+for (var_group in vars_grouping) {
+  for (var_value_ in vars_values) {
+    for(year_ in vars_years) {
+      col_name <- var_value
+      
+      df <- df_shrimp %>%
+        filter(year == year_) %>% 
+        group_var_by_category(var_group, var_value) %>%
+        arrange(desc(total)) %>%
+        mutate(rank = row_number(),
+               pct = total/sum(total)) %>%
+        filter(pct >= 0.01) %>%
+        rename(!!col_name := total)
+      
+      min_1pct_list_by_yr[[paste(var_group, var_value, year_, sep = "_")]] <- df
+      
+      print(year_)
+      print(df)
+      print(sum(df$pct))
+    }
+  }
+}
+
+### Top ten ----------------------- 
 
 top_ten_list_by_yr <- list()
 
