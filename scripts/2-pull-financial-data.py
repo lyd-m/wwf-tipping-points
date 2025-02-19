@@ -1,5 +1,5 @@
 ## PROJECT: FINANCIAL FLOWS TO ECOSYSTEM TIPPING POINTS ##
-# PULLING FINANCIAL FLOWS DATA FROM REFINITIV
+# AIM: PULLING FINANCIAL FLOWS DATA FROM REFINITIV
 # github.com/lyd-m/wwf-tipping-points
 
 ### PREREQUSITES -------------------------
@@ -93,7 +93,7 @@ df_companies_permids['year'] = df_companies_permids['year'].astype(str)
 
 # years to pull data for 
 yrs = list(range(2014,2025))
-yrs = list(map(str, yrs))
+yrs = list(map(str, yrs)) # convert to strings for searching
 
 # set fields with data items to pull for each asset class
 flds = pd.read_excel("./input-data/lseg_columns_needed.xlsx")
