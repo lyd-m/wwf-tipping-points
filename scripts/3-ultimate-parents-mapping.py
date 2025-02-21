@@ -168,6 +168,33 @@ print(f"This code took {end_exec - start_exec} to run.")
 ### CHECK QUALITY OF MATCHES -------------------
 # use fuzzy matching and checking for gaps to determine which matches to put straight onto the reference data, and which to manually check
 
+# clean names to help with checking
+
+
+def clean_text(text):
+    # Convert non-string data to string
+    text = (
+        str(text).strip().lower()
+    )  # Strip leading/trailing whitespace and convert to lowercase
+
+    # Remove all special characters except spaces
+    # text = re.sub(r"[^\w\s]", '', text)
+    text = re.sub(r"[^\w\s]|-", " ", text)
+
+    # Replace standalone 'ltd' and 'co' using word boundaries
+    # Ensure replacements are done in a non-overlapping manner
+    text = re.sub(r"\blimited\b\.?", "ltd", text)
+    text = re.sub(r"\bcompany\b\.?", "co", text)
+    text = re.sub(r"\bincorporated\b\.?", "inc", text)
+    text = re.sub(r"\bcorporation\b\.?", "corp", text)
+
+    return text
+
+
+# Apply the cleaning function to the 2nd and 3rd columns
+ups_df["search_query_clean"] = ups_df["search_query"].apply(clean_text)
+ups_df["CommonName_clean"] = ups_df["CommonName"].apply(clean_text)
+
 
 # function to compute similarity
 def fuzzy_match(row):
@@ -240,6 +267,16 @@ ultimate_parents_database = pd.concat(
     axis=0,
     ignore_index=True,
 )
+
+# remove any duplicates
+ultimate_parents_database = ultimate_parents_database.drop_duplicates()
+
+# overwrite ultimate parents database with new data
+
+ultimate_parents_database.to_excel(
+    "./intermediate-results/ultimate_parents_database.xlsx", index=False
+)
+
 ## send data needing manual checking to a separate file
 today = datetime.date.today()
 ups_df[ups_df["manual_check_needed"] == "TRUE"].to_csv(
