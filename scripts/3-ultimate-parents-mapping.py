@@ -31,7 +31,6 @@ from rapidfuzz import fuzz, process
 import os  # working directories
 import re  # regex
 import glob
-import qgrid
 
 
 ### SIMPLE FUNCTIONS ------------------------

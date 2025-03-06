@@ -74,7 +74,7 @@ df_companies_permids_test = pd.DataFrame(
 )
 
 # companies to pull financial data for
-df_companies = pd.read_excel("/Users/ucliipp/Library/CloudStorage/OneDrive-SharedLibraries-UniversityCollegeLondon/CEP-IIPP P4NE grant 2019-2021 - Documents/General/WWF tipping points/Main research/Empirical paper/Company research/companies.xlsx", sheet_name="yearly company hierarchies")
+df_companies = pd.read_excel("/Users/ucliipp/Library/CloudStorage/OneDrive-SharedLibraries-UniversityCollegeLondon/CEP-IIPP P4NE grant 2019-2021 - Documents/General/WWF tipping points/Main research/2025 Empirical paper/Company research/companies.xlsx", sheet_name="yearly company hierarchies")
 
 # collect all permids into one longer df
 df_companies_permids = pd.concat([df_companies.loc[:,["company","year","legal_entity_permid"]],
