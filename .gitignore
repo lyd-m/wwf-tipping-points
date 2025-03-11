@@ -10,3 +10,6 @@
 
 # Data pulled under licence
 /intermediate-results/
+
+# Input data files are too large for Github, will be documented separately
+/input-data/
