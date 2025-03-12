@@ -151,7 +151,7 @@ names(terra_shp_logging)[names(terra_shp_logging) == "Area_ha"] <- "area_ha_orig
 terra_shp_logging$id <- seq_len(nrow(terra_shp_logging))
 
 # calculate overlap using a clipped version of the logging db to save time
-terra_logging_overlap <- intersect(terra_shp_boreal, crop(terra_shp_logging, ext(terra_shp_boreal)))
+terra_logging_overlap <- intersect(terra_shp_boreal, terra_shp_logging)
 terra_logging_overlap_area <- expanse(terra_logging_overlap)
 df_terra_overlap <- as.data.frame(terra_logging_overlap)
 df_terra_overlap$overlap_area <- terra_logging_overlap_area
@@ -166,7 +166,7 @@ df_terra_logging_w_overlap <- as.data.frame(terra_shp_logging) %>%
   rename(overlap_area_m2 = overlap_area) %>% # keep track of units in names
   mutate(area_km2_original = units::set_units(area_km2_original, "km^2"),
          area_ha_original = units::set_units(area_ha_original, "ha"),
-         area_m2_recalculated = units::set_units(area_m2_recalculated), "m^2", 
+         area_m2_recalculated = units::set_units(area_m2_recalculated,"m^2"), 
          area_m2_original = units::set_units(area_m2_original, "m^2")) %>% # set units
   mutate(overlap_area_pct_w_recalculated = overlap_area_m2/area_m2_recalculated,
          overlap_area_pct_w_original = overlap_area_m2/area_m2_original)
@@ -190,6 +190,12 @@ for (df in list(df_logging_w_overlap, df_terra_logging_w_overlap)) {
     arrange(desc(overlap_area_m2))
   print(head(top_ten, n=10))
 }
+
+ggplot()+
+  geom_sf(data = overlap)
+
+ggplot() +
+  geom_sf(data = terra_logging_overlap)
 
 ### Tidy up companies ------------
 
