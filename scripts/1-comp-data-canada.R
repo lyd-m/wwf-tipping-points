@@ -7,12 +7,13 @@ library(terra)
 ## Import and clean boreal files ###########################
 # sf package
 boreal_shapefile_path <- "./input-data/company-data/boreal extent shapefiles"
-shp_boreal_hemi <- st_read(boreal_shapefile_path)
+shp_boreal_hemi <- st_make_valid(st_read(boreal_shapefile_path))
 shp_boreal <- shp_boreal_hemi %>% filter(COUNTRY == "CANADA",
                                          TYPE == c("BOREAL","B_ALPINE"))
 
 # make boreal all one layer
-shp_boreal <- shp_boreal %>% mutate(TYPE = if_else(TYPE == "B_ALPINE", "BOREAL", TYPE))
+shp_boreal <- shp_boreal %>% 
+  mutate(TYPE = if_else(TYPE == "B_ALPINE", "BOREAL", TYPE))
 
 # terra package
 terra_shp_boreal <- makeValid(vect(boreal_shapefile_path))
@@ -25,7 +26,7 @@ terra_shp_boreal$TYPE[terra_shp_boreal$TYPE=="B_ALPINE"] <- "BOREAL"
 
 ### Import files --------------
 shapefile_path <- "./input-data/company-data/can_logging"
-shp_logging <- st_read(shapefile_path)
+shp_logging <- st_make_valid(st_read(shapefile_path))
 shp_logging <- shp_logging %>%  # add unique identifiers for each concession
   mutate(id = row_number())
 
