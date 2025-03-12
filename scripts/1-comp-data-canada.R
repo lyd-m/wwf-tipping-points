@@ -5,8 +5,8 @@ library(mapview)
 library(terra)
 
 ## Import and clean boreal files ###########################
-
-boreal_shapefile_path <- "./input-data/company-data/boreal extent shapefiles/NABoreal.shp"
+# sf package
+boreal_shapefile_path <- "./input-data/company-data/boreal extent shapefiles"
 shp_boreal_hemi <- st_read(boreal_shapefile_path)
 shp_boreal <- shp_boreal_hemi %>% filter(COUNTRY == "CANADA",
                                          TYPE == c("BOREAL","B_ALPINE"))
@@ -14,6 +14,12 @@ shp_boreal <- shp_boreal_hemi %>% filter(COUNTRY == "CANADA",
 # make boreal all one layer
 shp_boreal <- shp_boreal %>% mutate(TYPE = if_else(TYPE == "B_ALPINE", "BOREAL", TYPE))
 
+# terra package
+terra_shp_boreal <- vect(boreal_shapefile_path)
+terra_shp_boreal <- terra_shp_boreal[terra_shp_boreal$COUNTRY=="CANADA"]
+terra_shp_boreal <- terra_shp_boreal[terra_shp_boreal$TYPE != "HEMIBOREAL", ]
+terra_shp_boreal <- terra_shp_boreal[terra_shp_boreal$TYPE != "H_ALPINE", ]
+terra_shp_boreal$TYPE[terra_shp_boreal$TYPE=="B_ALPINE"] <- "BOREAL"
 
 ## Logging --------------
 
@@ -123,9 +129,57 @@ df_logging_w_overlap <- df_logging_wo_duplicates %>%
   
 write_csv(df_logging_w_overlap, "./intermediate-results/20250311_canada_logging_overlap.csv")
 
+# overlap statistics - around 63% of logging area overlaps with boreal forest
+pct_overlap_total_w_recalculated <- sum(df_logging_w_overlap$overlap_area_m2)/sum(df_logging_w_overlap$area_m2_recalculated)
+pct_overlap_total_w_original <- sum(df_logging_w_overlap$overlap_area_m2)/sum(df_logging_w_overlap$area_m2_original)
+
 #### terra package --------------
+# check results with terra package to compare processing time and results
+terra_shp_logging <- vect(shapefile_path)
+terra_shp_logging <- project(terra_shp_logging, crs(terra_shp_boreal)) # reproject to equal-area projection
+# Recalculate area in square meters
+terra_shp_logging$area_m2_recalculated <- expanse(terra_shp_logging, unit="m")
+# Convert original Area_km from km² to m² manually
+terra_shp_logging$area_m2_original <- terra_shp_logging$Area_km * 1e6
+# Compute the difference between the original and recalculated areas
+terra_shp_logging$area_m2_diff <- terra_shp_logging$area_m2_original - terra_shp_logging$area_m2_recalculated
+# Rename columns
+names(terra_shp_logging)[names(terra_shp_logging) == "Area_km"] <- "area_km2_original"
+names(terra_shp_logging)[names(terra_shp_logging) == "Area_ha"] <- "area_ha_original"
+# add id columns to be able to group later
+terra_shp_logging$id <- seq_len(nrow(terra_shp_logging))
 
+# calculate overlap using a clipped version of the logging db to save time
+terra_logging_overlap <- intersect(terra_shp_boreal, crop(terra_shp_logging, ext(terra_shp_boreal)))
+terra_logging_overlap_area <- expanse(terra_logging_overlap)
+df_terra_overlap <- as.data.frame(terra_logging_overlap)
+df_terra_overlap$overlap_area <- terra_logging_overlap_area
+# group by id to only have one row per concession (i.e., for the different boreal polygons)
+df_terra_overlap <- as_tibble(df_terra_overlap, .name_repair = "unique") %>%
+  group_by(id) %>%
+  summarise(overlap_area = sum(overlap_area, na.rm = TRUE))
 
+df_terra_logging_w_overlap <- as.data.frame(terra_shp_logging) %>%
+  left_join(df_terra_overlap, by = "id") %>%
+  mutate(overlap_area = if_else(is.na(overlap_area),units::set_units(0, "m^2"), units::set_units(overlap_area, "m^2"))) %>%
+  rename(overlap_area_m2 = overlap_area) %>% # keep track of units in names
+  mutate(area_km2_original = units::set_units(area_km2_original, "km^2"),
+         area_ha_original = units::set_units(area_ha_original, "ha"),
+         area_m2_recalculated = units::set_units(area_m2_recalculated), "m^2", 
+         area_m2_original = units::set_units(area_m2_original, "m^2")) %>% # set units
+  mutate(overlap_area_pct_w_recalculated = overlap_area_m2/area_m2_recalculated,
+         overlap_area_pct_w_original = overlap_area_m2/area_m2_original)
+
+# remove duplicates from the dataset
+df_terra_logging_w_overlap <- df_terra_logging_w_overlap %>%
+  filter(!id %in% logging_duplicates_to_remove$id)
+
+#### comparing terra and sf -------------
+terra_pct_overlap_total_w_recalculated <- sum(df_terra_logging_w_overlap$overlap_area_m2)/sum(df_terra_logging_w_overlap$area_m2_recalculated)
+terra_pct_overlap_total_w_original <- sum(df_terra_logging_w_overlap$overlap_area_m2)/sum(df_terra_logging_w_overlap$area_m2_original)
+
+terra_pct_overlap_total_w_original - pct_overlap_total_w_original
+terra_pct_overlap_total_w_recalculated - pct_overlap_total_w_recalculated
 
 ### Tidy up companies ------------
 
