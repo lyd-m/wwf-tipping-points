@@ -15,7 +15,7 @@ shp_boreal <- shp_boreal_hemi %>% filter(COUNTRY == "CANADA",
 shp_boreal <- shp_boreal %>% mutate(TYPE = if_else(TYPE == "B_ALPINE", "BOREAL", TYPE))
 
 # terra package
-terra_shp_boreal <- vect(boreal_shapefile_path)
+terra_shp_boreal <- makeValid(vect(boreal_shapefile_path))
 terra_shp_boreal <- terra_shp_boreal[terra_shp_boreal$COUNTRY=="CANADA"]
 terra_shp_boreal <- terra_shp_boreal[terra_shp_boreal$TYPE != "HEMIBOREAL", ]
 terra_shp_boreal <- terra_shp_boreal[terra_shp_boreal$TYPE != "H_ALPINE", ]
@@ -135,7 +135,7 @@ pct_overlap_total_w_original <- sum(df_logging_w_overlap$overlap_area_m2)/sum(df
 
 #### terra package --------------
 # check results with terra package to compare processing time and results
-terra_shp_logging <- vect(shapefile_path)
+terra_shp_logging <- makeValid(vect(shapefile_path))
 terra_shp_logging <- project(terra_shp_logging, crs(terra_shp_boreal)) # reproject to equal-area projection
 # Recalculate area in square meters
 terra_shp_logging$area_m2_recalculated <- expanse(terra_shp_logging, unit="m")
@@ -180,6 +180,15 @@ terra_pct_overlap_total_w_original <- sum(df_terra_logging_w_overlap$overlap_are
 
 terra_pct_overlap_total_w_original - pct_overlap_total_w_original
 terra_pct_overlap_total_w_recalculated - pct_overlap_total_w_recalculated
+
+for (df in list(df_logging_w_overlap, df_terra_logging_w_overlap)) {
+  top_ten <- as_tibble(df, .name_repair = "unique") %>%
+    group_by(COMPANY1) %>%
+    summarise(overlap_area_m2 = sum(overlap_area_m2, na.rm = TRUE)) %>%
+    ungroup() %>%
+    arrange(desc(overlap_area_m2))
+  print(head(top_ten, n=10))
+}
 
 ### Tidy up companies ------------
 
