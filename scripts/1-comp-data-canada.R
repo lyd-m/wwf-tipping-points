@@ -111,14 +111,14 @@ shp_logging_wo_duplicates <- shp_logging_wo_duplicates %>%
 
 overlap <- st_intersection(shp_logging_wo_duplicates, shp_boreal)
 
-overlap <- overlap %>%
+overlap_grouped <- overlap %>%
   mutate(overlap_area = st_area(.)) %>% # calculate overlap with each polygon
   group_by(id) %>%
   summarise(overlap_area = sum(overlap_area)) %>%
   ungroup() # NOTE: concesssions with zero overlap area will not appear in this output because st_intersection( st_intersection() does not return rows for zero overlap
 
 # tabulate and join on to original dataset 
-df_overlap <- overlap %>% st_drop_geometry()
+df_overlap <- overlap_grouped %>% st_drop_geometry()
 df_logging_wo_duplicates <- shp_logging_wo_duplicates %>% st_drop_geometry()
 
 df_logging_w_overlap <- df_logging_wo_duplicates %>%
@@ -193,7 +193,7 @@ for (df in list(df_logging_w_overlap, df_terra_logging_w_overlap)) {
 
 # plotting the overlap from each option
 ggplot()+
-  geom_sf(data = st_intersection(shp_logging_wo_duplicates, shp_boreal))
+  geom_sf(data = overlap)
 
 ggplot() +
   geom_sf(data = terra_logging_overlap)
@@ -201,22 +201,72 @@ ggplot() +
 # there are gaps in the output from sf package - it's unclear where they have come from 
 # so move forward with the terra output
 
+df_logging_overlap_final <- df_terra_logging_w_overlap # assigning in case change mind in future
+
 ### Tidy up companies ------------
 
 # when there are multiple companies, pivot longer and assign each the full area
-shp_logging_w_overlap_tabular_long <- shp_logging_w_overlap_tabular %>%
+df_logging_overlap_final <- df_logging_overlap_final %>%
   pivot_longer(cols = starts_with("COMPANY"), 
                names_to = "company_col", 
                values_to = "company") %>%
   filter(!is.na(company)) %>%
-  group_by(id) %>%
-  mutate(company_count = n(),
-         Area_km = Area_km/company_count,
-         Area_ha = Area_ha/company_count) %>%
-  select(-company_col, -company_count) %>%
+  #group_by(id) %>%. ## these steps were for if decide to split the area between companies 
+  #mutate(company_count = n(),
+         #Area_km = Area_km/company_count,
+         #Area_ha = Area_ha/company_count) %>%
+  #select(-company_col, -company_count) %>%
+  select(-company_col) %>%
   clean_names %>% # clean column names
-  mutate(company = str_to_lower(company),
-         company = str_replace_all(company, "\\.", ""))
+  select(company, everything())
+
+## some rows have multiple companies within COMPANY1 column
+## no easy way to solve this as some are supposed to be "and" and others are lists, just find manually
+# Tolko Industries Ltd., Footner Forest Products Ltd. and La Crete Sawmills Ltd.
+# Tolko Industries Ltd., Vanderwell Contractors (1971) Ltd. and West Fraser Mills Ltd. (Slave Lake)
+# West Fraser Mills Ltd. and Tolko Industries Ltd.
+# Ainsworth GP Ltd. and Clear Hills County Loggers Corp.
+# Tolko Industries Ltd. and 1108459 Alberta Ltd.
+
+# here, split the columns keeping all other info the same
+row1 <- df_logging_overlap_final %>%
+  filter(company == "Tolko Industries Ltd., Footner Forest Products Ltd. and La Crete Sawmills Ltd.")
+row1_1 <- row1 %>%
+  mutate(company = "Tolko Industries Ltd.")
+row1_2 <- row1 %>%
+  mutate(company = "Footner Forest Products Ltd.")
+row1_3 <- row1 %>%
+  mutate(company = "La Crete Sawmills Ltd.")
+
+row2 <- df_logging_overlap_final %>%
+  filter(company == "West Fraser Mills Ltd. and Tolko Industries Ltd.")
+row2_1 <- row2 %>%
+  mutate(company = "West Fraser Mills Ltd.")
+row2_2 <- row2 %>%
+  mutate(company = "Tolko Industries Ltd.")
+
+row3 <- df_logging_overlap_final %>%
+  filter(company == "Ainsworth GP Ltd. and Clear Hills County Loggers Corp.")
+row3_1 <- row3 %>%
+  mutate(company = "Ainsworth GP Ltd.")
+row3_2 <- row3 %>%
+  mutate(company = "Clear Hills County Loggers Corp.")
+
+row4 <- df_logging_overlap_final %>%
+  filter(company == "Tolko Industries Ltd. and 1108459 Alberta Ltd.")
+row4_1 <- row4 %>%
+  mutate(company = "Tolko Industries Ltd.")
+row4_2 <- row4 %>%
+  mutate(company = "1108459 Alberta Ltd.")
+
+row5 < df_logging_overlap_final %>%
+  filter(company= "Tolko Industries Ltd., Vanderwell Contractors (1971) Ltd. and West Fraser Mills Ltd. (Slave Lake)")
+row5_1 <- row5 %>%
+  mutate(company = "Tolko Industries Ltd.")
+row5_2 <- row5 %>%
+  mutate(company = "Vanderwell Contractors (1971) Ltd.")
+row5_3 <- row5 %>%
+  mutate(company = "West Fraser Mills Ltd. (Slave Lake)")
   
 # test that done consistently
 sum((shp_logging %>% filter(!is.na(COMPANY1)))$Area_ha)
@@ -228,11 +278,3 @@ shp_logging_w_overlap_tabular_long %>%
             overlap_area_km2 = sum(overlap_area_km2)) %>%
   ungroup() %>% View()
 
-## Method 2: yes/no if concession overlaps with boreal ---------------------
-
-shp_logging$near_boreal <- sapply(1:nrow(shp_logging), function(i) {
-  any(st_is_within_distance(shp_logging[i, ], shp_boreal, dist = 10000))
-})
-
-shp_logging %>% View(
-)
