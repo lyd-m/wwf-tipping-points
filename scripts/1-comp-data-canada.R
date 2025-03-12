@@ -191,15 +191,19 @@ for (df in list(df_logging_w_overlap, df_terra_logging_w_overlap)) {
   print(head(top_ten, n=10))
 }
 
+# plotting the overlap from each option
 ggplot()+
-  geom_sf(data = overlap)
+  geom_sf(data = st_intersection(shp_logging_wo_duplicates, shp_boreal))
 
 ggplot() +
   geom_sf(data = terra_logging_overlap)
 
+# there are gaps in the output from sf package - it's unclear where they have come from 
+# so move forward with the terra output
+
 ### Tidy up companies ------------
 
-# when there are multiple companies, pivot longer and split the area between them equally
+# when there are multiple companies, pivot longer and assign each the full area
 shp_logging_w_overlap_tabular_long <- shp_logging_w_overlap_tabular %>%
   pivot_longer(cols = starts_with("COMPANY"), 
                names_to = "company_col", 
