@@ -3,6 +3,7 @@ library(tidyverse)
 library(janitor)
 library(mapview)
 library(terra)
+library(readxl)
 
 ## Import and clean boreal files ###########################
 # sf package
@@ -128,7 +129,7 @@ df_logging_w_overlap <- df_logging_wo_duplicates %>%
   mutate(overlap_area_pct_w_recalculated = overlap_area_m2/area_m2_recalculated,
          overlap_area_pct_w_original = overlap_area_m2/area_m2_original)
   
-write_csv(df_logging_w_overlap, "./intermediate-results/20250311_canada_logging_overlap.csv")
+#write_csv(df_logging_w_overlap, "./intermediate-results/20250311_canada_logging_overlap.csv")
 
 # overlap statistics - around 63% of logging area overlaps with boreal forest
 pct_overlap_total_w_recalculated <- sum(df_logging_w_overlap$overlap_area_m2)/sum(df_logging_w_overlap$area_m2_recalculated)
@@ -192,11 +193,11 @@ for (df in list(df_logging_w_overlap, df_terra_logging_w_overlap)) {
 }
 
 # plotting the overlap from each option
-ggplot()+
-  geom_sf(data = overlap)
+#ggplot()+
+  #geom_sf(data = overlap)
 
-ggplot() +
-  geom_sf(data = terra_logging_overlap)
+#ggplot() +
+  #geom_sf(data = terra_logging_overlap)
 
 # there are gaps in the output from sf package - it's unclear where they have come from 
 # so move forward with the terra output
@@ -227,6 +228,7 @@ df_logging_overlap_final <- df_logging_overlap_final %>%
 # West Fraser Mills Ltd. and Tolko Industries Ltd.
 # Ainsworth GP Ltd. and Clear Hills County Loggers Corp.
 # Tolko Industries Ltd. and 1108459 Alberta Ltd.
+# Edgewood Forest Products Ltd. / Weyerhaeuser Company
 
 # here, split the columns keeping all other info the same
 row1 <- df_logging_overlap_final %>%
@@ -259,22 +261,96 @@ row4_1 <- row4 %>%
 row4_2 <- row4 %>%
   mutate(company = "1108459 Alberta Ltd.")
 
-row5 < df_logging_overlap_final %>%
-  filter(company= "Tolko Industries Ltd., Vanderwell Contractors (1971) Ltd. and West Fraser Mills Ltd. (Slave Lake)")
+row5 <- df_logging_overlap_final %>%
+  filter(company== "Tolko Industries Ltd., Vanderwell Contractors (1971) Ltd. and West Fraser Mills Ltd. (Slave Lake)")
 row5_1 <- row5 %>%
   mutate(company = "Tolko Industries Ltd.")
 row5_2 <- row5 %>%
   mutate(company = "Vanderwell Contractors (1971) Ltd.")
 row5_3 <- row5 %>%
   mutate(company = "West Fraser Mills Ltd. (Slave Lake)")
-  
-# test that done consistently
-sum((shp_logging %>% filter(!is.na(COMPANY1)))$Area_ha)
-sum(shp_logging_w_overlap_tabular_long$area_ha)
 
-shp_logging_w_overlap_tabular_long %>%
-  group_by(company) %>%
-  summarise(area_km = sum(area_km),
-            overlap_area_km2 = sum(overlap_area_km2)) %>%
-  ungroup() %>% View()
+row6 <- df_logging_overlap_final %>%
+  filter(company == "Edgewood Forest Products Ltd. / Weyerhaeuser Company")
+row6_1 <- row6 %>%
+  mutate(company = "Edgewood Forest Products Ltd.")
+row6_2 <- row6 %>%
+  mutate(company = "Weyerhaeuser Company")
+
+df_logging_overlap_final <- df_logging_overlap_final %>%
+  filter(!company %in% c("Tolko Industries Ltd., Footner Forest Products Ltd. and La Crete Sawmills Ltd.",
+                         "Tolko Industries Ltd., Vanderwell Contractors (1971) Ltd. and West Fraser Mills Ltd. (Slave Lake)",
+                         "West Fraser Mills Ltd. and Tolko Industries Ltd.",
+                         "Ainsworth GP Ltd. and Clear Hills County Loggers Corp.",
+                         "Tolko Industries Ltd. and 1108459 Alberta Ltd.",
+                         "Edgewood Forest Products Ltd. / Weyerhaeuser Company")) %>%
+  bind_rows(row1_1, 
+            row1_2, 
+            row1_3, 
+            row2_1, 
+            row2_2, 
+            row3_1, 
+            row3_2, 
+            row4_1, 
+            row4_2, 
+            row5_1, 
+            row5_2, 
+            row5_3,
+            row6_1,
+            row6_2)
+
+## clean accent names
+## pull out unique companies for mapping to corporate groups
+
+remove_accents <- function(x) {
+  # Using stri_trans_general to remove accents
+  stringi::stri_trans_general(x, id = "Latin-ASCII")
+}
+
+df_logging_overlap_final$company <- remove_accents(df_logging_overlap_final$company)
+
+unique_companies <- df_logging_overlap_final %>%
+  distinct(company) %>%
+  arrange(company)
+
+write.csv(unique_companies, "./intermediate-results/companies_canada_logging_unique.csv",
+            fileEncoding = "UTF-8",
+          row.names = FALSE)
+
+### Join on corporate groups where mapped ------------
+logging_groups <- read_excel("./intermediate-results/companies_canada_logging_corporate_groups.xlsx") %>%
+  distinct(company, .keep_all = TRUE)
+
+# join
+df_logging_overlap_final <- df_logging_overlap_final %>%
+  left_join(logging_groups %>% select(company,group_name), by = c("company")) 
+
+df_logging_overlap_final <- df_logging_overlap_final %>%
+  select(group_name, everything())
+
+df_logging_overlap_final %>%
+  write_csv("./intermediate-results/companies_canada_logging_overlap_all_data.csv")
+
+### Group and analyse ------------
+
+df_logging_overlap_final %>%
+  group_by(group_name) %>%
+  summarise(overlap_area_m2 = sum(overlap_area_m2, na.rm = TRUE)) %>%
+  ungroup() %>%
+  arrange(desc(overlap_area_m2)) %>%
+  mutate(prop_total = overlap_area_m2/sum(overlap_area_m2),
+         rank = row_number(),
+         prop_cumulative = cumsum(prop_total)) %>%
+  View()
+  
+
+# test that done consistently
+#sum((shp_logging %>% filter(!is.na(COMPANY1)))$Area_ha)
+#sum(shp_logging_w_overlap_tabular_long$area_ha)
+
+#shp_logging_w_overlap_tabular_long %>%
+  #group_by(company) %>%
+  #summarise(area_km = sum(area_km),
+            #overlap_area_km2 = sum(overlap_area_km2)) %>%
+  #ungroup() %>% View()
 
